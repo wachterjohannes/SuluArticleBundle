@@ -6,7 +6,7 @@
     "require": {
         "php": "^5.5 || ^7.0",
         "sulu/sulu": "^1.5.1 || dev-develop",
-        "sulu/document-manager": "@dev",
+        "sulu/document-manager": "dev-feature/child-versions as 0.9.2",
         "massive/search-bundle": "@dev",
         "ongr/elasticsearch-bundle": "~1.0"
     },
@@ -18,10 +18,17 @@
         "jackalope/jackalope-doctrine-dbal": "^1.2.5",
         "jackalope/jackalope-jackrabbit": "1.2.*",
         "phpunit/phpunit": "^4.8 || ^5.0",
+        "phpcr/phpcr-shell": "~1.0",
 
         "php-task/task-bundle": "@dev",
         "php-task/php-task": "@dev"
     },
+    "repositories": [
+        {
+            "type": "git",
+            "url": "git@github.com:wachterjohannes/sulu-document-manager.git"
+        }
+    ],
     "keywords": [
         "articles"
     ],

@@ -14,16 +14,16 @@ namespace Sulu\Bundle\ArticleBundle\Document\Initializer;
 use PHPCR\NodeType\NodeTypeDefinitionInterface;
 
 /**
- * Node type for article phpcr-nodes.
+ * Node type for article-page phpcr-nodes.
  */
-class ArticleNodeType implements NodeTypeDefinitionInterface
+class ArticlePageNodeType implements NodeTypeDefinitionInterface
 {
     /**
      * {@inheritdoc}
      */
     public function getName()
     {
-        return 'sulu:article';
+        return 'sulu:articlepage';
     }
 
     /**
@@ -32,7 +32,7 @@ class ArticleNodeType implements NodeTypeDefinitionInterface
     public function getDeclaredSupertypeNames()
     {
         return [
-            'sulu:base',
+            'sulu:article',
         ];
     }
 
@@ -89,8 +89,6 @@ class ArticleNodeType implements NodeTypeDefinitionInterface
      */
     public function getDeclaredChildNodeDefinitions()
     {
-        return [
-            new ArticlePageNodeDefinition(),
-        ];
+        return [];
     }
 }
