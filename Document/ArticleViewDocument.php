@@ -11,261 +11,143 @@
 
 namespace Sulu\Bundle\ArticleBundle\Document;
 
-use ONGR\ElasticsearchBundle\Annotation\Document;
-use ONGR\ElasticsearchBundle\Annotation\Embedded;
-use ONGR\ElasticsearchBundle\Annotation\Id;
-use ONGR\ElasticsearchBundle\Annotation\Property;
-use ONGR\ElasticsearchBundle\Collection\Collection;
-
 /**
  * Indexable document for articles.
- *
- * @Document(type="article")
  */
 class ArticleViewDocument implements ArticleViewDocumentInterface
 {
     /**
      * @var string
-     *
-     * @Id
      */
     protected $id;
 
     /**
      * @var string
-     *
-     * @Property(type="string", options={"analyzer": "keyword"})
      */
     protected $uuid;
 
     /**
      * @var string
-     *
-     * @Property(type="string", options={"analyzer": "keyword"})
      */
     protected $locale;
 
     /**
      * @var string
-     *
-     * @Property(
-     *     type="string",
-     *     options={
-     *         "fields":{
-     *            "raw":{"type":"string", "index":"not_analyzed"},
-     *            "value":{"type":"string"}
-     *         }
-     *     }
-     * )
      */
     protected $title;
 
     /**
      * @var string
-     *
-     * @Property(
-     *     type="string",
-     *     options={
-     *         "analyzer": "pathAnalyzer",
-     *         "fields":{
-     *            "raw":{"type":"string", "index":"not_analyzed"},
-     *            "value":{"type":"string"}
-     *         }
-     *     }
-     * )
      */
     protected $routePath;
 
     /**
      * @var string
-     *
-     * @Property(type="string", options={"analyzer": "keyword"})
      */
     protected $parentPageUuid;
 
     /**
      * @var string
-     *
-     * @Property(
-     *     type="string",
-     *     options={
-     *         "analyzer":"keyword"
-     *     }
-     * )
      */
     protected $type;
 
     /**
      * @var string
-     *
-     * @Property(
-     *     type="string",
-     *     options={
-     *         "analyzer":"keyword"
-     *     }
-     * )
      */
     protected $typeTranslation;
 
     /**
      * @var string
-     *
-     * @Property(
-     *     type="string",
-     *     options={
-     *         "analyzer":"keyword"
-     *     }
-     * )
      */
     protected $structureType;
 
     /**
      * @var string
-     *
-     * @Property(
-     *     type="string",
-     *     options={
-     *         "fields":{
-     *            "raw":{"type":"string", "index":"not_analyzed"},
-     *            "value":{"type":"string"}
-     *         }
-     *     }
-     * )
      */
     protected $changerFullName;
 
     /**
      * @var string
-     *
-     * @Property(
-     *     type="string",
-     *     options={
-     *         "fields":{
-     *            "raw":{"type":"string", "index":"not_analyzed"},
-     *            "value":{"type":"string"}
-     *         }
-     *     }
-     * )
      */
     protected $creatorFullName;
 
     /**
      * @var \DateTime
-     *
-     * @Property(type="date")
      */
     protected $changed;
 
     /**
      * @var \DateTime
-     *
-     * @Property(type="date")
      */
     protected $created;
 
     /**
      * @var ExcerptViewObject
-     *
-     * @Embedded(class="SuluArticleBundle:ExcerptViewObject")
      */
     protected $excerpt;
 
     /**
      * @var SeoViewObject
-     *
-     * @Embedded(class="SuluArticleBundle:SeoViewObject")
      */
     protected $seo;
 
     /**
      * @var \DateTime
-     *
-     * @Property(type="date")
      */
     protected $authored;
 
     /**
      * @var string
-     *
-     * @Property(
-     *     type="string",
-     *     options={
-     *         "fields":{
-     *            "raw":{"type":"string", "index":"not_analyzed"},
-     *            "value":{"type":"string"}
-     *         }
-     *     }
-     * )
      */
     protected $authorFullName;
 
     /**
      * @var string
-     *
-     * @Property(type="string")
      */
     protected $teaserDescription = '';
 
     /**
      * @var int
-     *
-     * @Property(type="integer")
      */
     protected $teaserMediaId;
 
     /**
      * @var \DateTime
-     *
-     * @Property(type="date")
      */
     protected $published;
 
     /**
      * @var bool
-     *
-     * @Property(type="boolean")
      */
     protected $publishedState;
 
     /**
      * @var LocalizationStateViewObject
-     *
-     * @Embedded(class="SuluArticleBundle:LocalizationStateViewObject")
      */
     protected $localizationState;
 
     /**
      * @var string
-     *
-     * @Property(type="string")
      */
     protected $authorId;
 
     /**
      * @var string
-     *
-     * @Property(type="string")
      */
     protected $creatorContactId;
 
     /**
      * @var string
-     *
-     * @Property(type="string")
      */
     protected $changerContactId;
 
     /**
      * @var ArticlePageViewObject[]
-     *
-     * @Embedded(class="SuluArticleBundle:ArticlePageViewObject", multiple=true)
      */
     protected $pages = [];
 
     /**
      * @var string
-     *
-     * @Property(type="binary")
      */
     protected $contentData;
 
@@ -744,7 +626,7 @@ class ArticleViewDocument implements ArticleViewDocumentInterface
     /**
      * {@inheritdoc}
      */
-    public function setPages(Collection $pages)
+    public function setPages(array $pages)
     {
         $this->pages = $pages;
 

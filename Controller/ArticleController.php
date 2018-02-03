@@ -14,15 +14,13 @@ namespace Sulu\Bundle\ArticleBundle\Controller;
 use FOS\RestBundle\Controller\Annotations\Post;
 use FOS\RestBundle\Routing\ClassResourceInterface;
 use JMS\Serializer\SerializationContext;
-use ONGR\ElasticsearchBundle\Service\Manager;
-use ONGR\ElasticsearchDSL\Query\Compound\BoolQuery;
-use ONGR\ElasticsearchDSL\Query\FullText\MatchPhrasePrefixQuery;
-use ONGR\ElasticsearchDSL\Query\FullText\MatchQuery;
-use ONGR\ElasticsearchDSL\Query\MatchAllQuery;
-use ONGR\ElasticsearchDSL\Query\TermLevel\IdsQuery;
-use ONGR\ElasticsearchDSL\Query\TermLevel\RangeQuery;
-use ONGR\ElasticsearchDSL\Query\TermLevel\TermQuery;
-use ONGR\ElasticsearchDSL\Sort\FieldSort;
+use Pucene\Component\QueryBuilder\Query\Compound\BoolQuery;
+use Pucene\Component\QueryBuilder\Query\FullText\MatchQuery;
+use Pucene\Component\QueryBuilder\Query\MatchAllQuery;
+use Pucene\Component\QueryBuilder\Query\TermLevel\IdsQuery;
+use Pucene\Component\QueryBuilder\Query\TermLevel\RangeQuery;
+use Pucene\Component\QueryBuilder\Query\TermLevel\TermQuery;
+use Pucene\Component\QueryBuilder\Search;
 use Sulu\Bundle\ArticleBundle\Admin\ArticleAdmin;
 use Sulu\Bundle\ArticleBundle\Document\ArticleDocument;
 use Sulu\Bundle\ArticleBundle\ListBuilder\ElasticSearchFieldDescriptor;
@@ -121,20 +119,17 @@ class ArticleController extends RestController implements ClassResourceInterface
 
         $restHelper = $this->get('sulu_core.list_rest_helper');
 
-        /** @var Manager $manager */
-        $manager = $this->get('es.manager.default');
-        $repository = $manager->getRepository($this->get('sulu_article.view_document.factory')->getClass('article'));
-        $search = $repository->createSearch();
+        $query = new BoolQuery();
 
         $limit = (int) $restHelper->getLimit();
         $page = (int) $restHelper->getPage();
 
         if (null !== $locale) {
-            $search->addQuery(new TermQuery('locale', $locale));
+            $query->must(new TermQuery('locale', $locale));
         }
 
         if (count($ids = array_filter(explode(',', $request->get('ids', ''))))) {
-            $search->addQuery(new IdsQuery($this->getViewDocumentIds($ids, $locale)));
+            $query->must(new IdsQuery($this->getViewDocumentIds($ids, $locale)));
             $limit = count($ids);
         }
 
@@ -143,62 +138,65 @@ class ArticleController extends RestController implements ClassResourceInterface
         ) {
             $boolQuery = new BoolQuery();
             foreach ($searchFields as $searchField) {
-                $boolQuery->add(new MatchPhrasePrefixQuery($searchField, $searchPattern), BoolQuery::SHOULD);
+                // TODO MatchPhrasePrefixQuery
+                $boolQuery->should(new MatchQuery($searchField, $searchPattern));
             }
-            $search->addQuery($boolQuery);
+            $query->must($boolQuery);
         }
 
         if (null !== ($type = $request->get('type'))) {
-            $search->addQuery(new TermQuery('type', $type));
+            $query->must(new TermQuery('type', $type));
         }
 
         if ($contactId = $request->get('contactId')) {
             $boolQuery = new BoolQuery();
-            $boolQuery->add(new MatchQuery('changer_contact_id', $contactId), BoolQuery::SHOULD);
-            $boolQuery->add(new MatchQuery('creator_contact_id', $contactId), BoolQuery::SHOULD);
-            $boolQuery->add(new MatchQuery('author_id', $contactId), BoolQuery::SHOULD);
-            $search->addQuery($boolQuery);
+            $boolQuery->should(new MatchQuery('changerContactId', $contactId));
+            $boolQuery->should(new MatchQuery('creatorContactId', $contactId));
+            $boolQuery->should(new MatchQuery('authorId', $contactId));
+            $query->must($boolQuery);
         }
 
         if ($categoryId = $request->get('categoryId')) {
-            $search->addQuery(new TermQuery('excerpt.categories.id', $categoryId), BoolQuery::MUST);
+            $query->must(new TermQuery('excerpt.categories.id', $categoryId));
         }
 
         if ($tagId = $request->get('tagId')) {
-            $search->addQuery(new TermQuery('excerpt.tags.id', $tagId), BoolQuery::MUST);
+            $query->must(new TermQuery('excerpt.tags.id', $tagId));
         }
 
         if ($pageId = $request->get('pageId')) {
-            $search->addQuery(new TermQuery('parent_page_uuid', $pageId), BoolQuery::MUST);
+            $query->must(new TermQuery('parentPageUuid', $pageId));
         }
 
         if ($workflowStage = $request->get('workflowStage')) {
-            $search->addQuery(new TermQuery('published_state', 'published' === $workflowStage), BoolQuery::MUST);
+            $query->must(new TermQuery('publishedState', 'published' === $workflowStage));
         }
 
         $authoredFrom = $request->get('authoredFrom');
         $authoredTo = $request->get('authoredTo');
         if ($authoredFrom || $authoredTo) {
-            $search->addQuery($this->getRangeQuery('authored', $authoredFrom, $authoredTo), BoolQuery::MUST);
+            $query->must($this->getRangeQuery('authored', $authoredFrom, $authoredTo));
         }
 
-        if (null === $search->getQueries()) {
-            $search->addQuery(new MatchAllQuery());
+        if (null === $query->isEmpty()) {
+            $query = new MatchAllQuery();
         }
 
         if (null !== $restHelper->getSortColumn() &&
             $sortField = $this->getSortFieldName($restHelper->getSortColumn())
         ) {
-            $search->addSort(
-                new FieldSort($sortField, $restHelper->getSortOrder())
-            );
+            // TODO field-sort
+            // $search->addSort(new FieldSort($sortField, $restHelper->getSortOrder()));
         }
 
+        $search = new Search($query);
         $search->setSize($limit);
         $search->setFrom(($page - 1) * $limit);
 
+        $viewManager = $this->get('sulu_article.view_manager.default');
+        $searchResult = $viewManager->search($search);
+
         $result = [];
-        $searchResult = $repository->findDocuments($search);
         foreach ($searchResult as $document) {
             if (false !== ($index = array_search($document->getUuid(), $ids))) {
                 $result[$index] = $document;
@@ -221,7 +219,7 @@ class ArticleController extends RestController implements ClassResourceInterface
                     $request->query->all(),
                     $page,
                     $limit,
-                    $searchResult->count()
+                    $viewManager->total()
                 )
             )
         );
@@ -238,7 +236,11 @@ class ArticleController extends RestController implements ClassResourceInterface
      */
     private function getRangeQuery($field, $from, $to)
     {
-        return new RangeQuery($field, array_filter(['gte' => $from, 'lte' => $to]));
+        $query = new RangeQuery($field);
+        $query->gte($from);
+        $query->lte($to);
+
+        return $query;
     }
 
     /**

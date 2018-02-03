@@ -11,11 +11,10 @@
 
 namespace Sulu\Bundle\ArticleBundle\Twig;
 
-use ONGR\ElasticsearchBundle\Result\DocumentIterator;
 use Sulu\Bundle\ArticleBundle\Content\ArticleResourceItem;
 use Sulu\Bundle\ArticleBundle\Content\ArticleResourceItemFactory;
 use Sulu\Bundle\ArticleBundle\Document\ArticleDocument;
-use Sulu\Bundle\ArticleBundle\Document\ArticleViewDocument;
+use Sulu\Bundle\ArticleBundle\Document\ArticleViewDocumentInterface;
 use Sulu\Bundle\ArticleBundle\Document\Repository\ArticleViewDocumentRepository;
 use Sulu\Bundle\ArticleBundle\Exception\ArticleInRequestNotFoundException;
 use Sulu\Bundle\ArticleBundle\Metadata\StructureTagTrait;
@@ -178,15 +177,14 @@ class ArticleViewDocumentTwigExtension extends \Twig_Extension
     }
 
     /**
-     * @param DocumentIterator $articleViewDocuments
+     * @param ArticleViewDocumentInterface[] $articleViewDocuments
      *
      * @return ArticleResourceItem[]
      */
-    private function getResourceItems(DocumentIterator $articleViewDocuments)
+    private function getResourceItems(array $articleViewDocuments)
     {
         $articleResourceItems = [];
 
-        /** @var ArticleViewDocument $articleViewDocument */
         foreach ($articleViewDocuments as $articleViewDocument) {
             $this->referenceStore->add($articleViewDocument->getUuid());
             $articleResourceItems[] = $this->articleResourceItemFactory->createResourceItem($articleViewDocument);

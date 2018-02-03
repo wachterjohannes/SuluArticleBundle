@@ -12,11 +12,9 @@
 namespace Functional\Controller;
 
 use Ferrandini\Urlizer;
-use ONGR\ElasticsearchBundle\Service\Manager;
 use Ramsey\Uuid\Uuid;
 use Sulu\Bundle\ArticleBundle\Document\ArticleDocument;
 use Sulu\Bundle\ArticleBundle\Document\ArticlePageDocument;
-use Sulu\Bundle\ArticleBundle\Document\ArticleViewDocument;
 use Sulu\Bundle\ArticleBundle\Document\Index\IndexerInterface;
 use Sulu\Bundle\ArticleBundle\Metadata\ArticleViewDocumentIdTrait;
 use Sulu\Bundle\CategoryBundle\Entity\Category;
@@ -545,7 +543,7 @@ class ArticleControllerTest extends SuluTestCase
         $this->flush();
 
         $client = $this->createAuthenticatedClient();
-        $client->request('GET', '/api/articles?locale=de&searchFields=route_path&search=/articles&type=blog');
+        $client->request('GET', '/api/articles?locale=de&searchFields=routePath&search=/articles&type=blog');
 
         $this->assertHttpStatusCode(200, $client->getResponse());
 
@@ -1403,10 +1401,9 @@ class ArticleControllerTest extends SuluTestCase
 
     private function findViewDocument($uuid, $locale)
     {
-        /** @var Manager $manager */
-        $manager = $this->getContainer()->get('es.manager.default');
+        $manager = $this->getContainer()->get('sulu_article.view_manager.default');
 
-        return $manager->find(ArticleViewDocument::class, $this->getViewDocumentId($uuid, $locale));
+        return $manager->get($this->getViewDocumentId($uuid, $locale));
     }
 
     /**

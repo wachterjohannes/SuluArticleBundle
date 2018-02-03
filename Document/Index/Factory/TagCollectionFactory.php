@@ -11,7 +11,6 @@
 
 namespace Sulu\Bundle\ArticleBundle\Document\Index\Factory;
 
-use ONGR\ElasticsearchBundle\Collection\Collection;
 use Sulu\Bundle\ArticleBundle\Document\TagViewObject;
 use Sulu\Bundle\TagBundle\Tag\TagManagerInterface;
 
@@ -40,26 +39,25 @@ class TagCollectionFactory
      *
      * @param string[] $tagNames
      *
-     * @return Collection
+     * @return TagViewObject[]
      */
     public function create($tagNames)
     {
-        $collection = new Collection();
+        $result = [];
 
         foreach ($tagNames as $tagName) {
             $tagEntity = $this->tagManager->findByName($tagName);
-
             if (!$tagEntity) {
-                return;
+                continue;
             }
 
             $tag = new TagViewObject();
             $tag->name = $tagName;
             $tag->id = $tagEntity->getId();
 
-            $collection[] = $tag;
+            $result[] = $tag;
         }
 
-        return $collection;
+        return $result;
     }
 }

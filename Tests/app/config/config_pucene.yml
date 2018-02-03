@@ -1,0 +1,387 @@
+pucene:
+    adapter: pucene
+    adapters:
+        pucene: ~
+    indices:
+        su_articles:
+            mappings:
+                articles:
+                    properties:
+                        uuid:
+                            type: keyword
+                        locale:
+                            type: keyword
+                        title:
+                            type: text
+                            fields:
+                                raw:
+                                    type: keyword
+                        routePath:
+                            type: text
+                            # TODO analyzer: pathAnalyzer
+                            fields:
+                                raw:
+                                    type: keyword
+                        parentPageUuid:
+                            type: keyword
+                        type:
+                            type: keyword
+                        typeTranslation:
+                            type: keyword
+                        structureType:
+                            type: keyword
+                        changed:
+                            type: date
+                        changerContactId:
+                            type: integer
+                        changerFullName:
+                            type: text
+                            fields:
+                                raw:
+                                    type: keyword
+                        created:
+                            type: date
+                        creatorContactId:
+                            type: integer
+                        creatorFullName:
+                            type: text
+                            fields:
+                                raw:
+                                    type: keyword
+                        authored:
+                            type: date
+                        authorId:
+                            type: integer
+                        authorFullName:
+                            type: text
+                            fields:
+                                raw:
+                                    type: keyword
+                        published:
+                            type: date
+                        teaserDescription:
+                            type: text
+                        teaserMediaId:
+                            type: integer
+                        publishedState:
+                            type: boolean
+                        contentData:
+                            type: binary
+                        localizationState:
+                            properties:
+                                state:
+                                    type: keyword
+                                locale:
+                                    type: keyword
+                        excerpt:
+                            properties:
+                                title:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                description:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                more:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                icon:
+                                    properties:
+                                        id:
+                                            type: integer
+                                        title:
+                                            type: text
+                                            fields:
+                                                raw:
+                                                    type: keyword
+                                        copyright:
+                                            type: text
+                                            fields:
+                                                raw:
+                                                    type: keyword
+                                        formats:
+                                            type: binary
+                                        url:
+                                            type: keyword
+                                images:
+                                    properties:
+                                        id:
+                                            type: integer
+                                        title:
+                                            type: text
+                                            fields:
+                                                raw:
+                                                    type: keyword
+                                        copyright:
+                                            type: text
+                                            fields:
+                                                raw:
+                                                    type: keyword
+                                        formats:
+                                            type: binary
+                                        url:
+                                            type: keyword
+                                tags:
+                                    properties:
+                                        id:
+                                            type: integer
+                                        name:
+                                            type: text
+                                            fields:
+                                                raw:
+                                                    type: keyword
+                                categories:
+                                    properties:
+                                        id:
+                                            type: integer
+                                        key:
+                                            type: keyword
+                                        name:
+                                            type: text
+                                            fields:
+                                                raw:
+                                                    type: keyword
+                                        keywords:
+                                            type: binary
+                        seo:
+                            properties:
+                                title:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                description:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                keywords:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                canonicalUrl:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                noIndex:
+                                    type: boolean
+                                noFollow:
+                                    type: boolean
+                                hideInSitemap:
+                                    type: boolean
+                        pages:
+                            properties:
+                                uuid:
+                                    type: keyword
+                                title:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                routePath:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                pageNumber:
+                                    type: integer
+                                contentData:
+                                    type: binary
+        su_articles_live:
+            mappings:
+                articles:
+                    properties:
+                        uuid:
+                            type: keyword
+                        locale:
+                            type: keyword
+                        title:
+                            type: text
+                            fields:
+                                raw:
+                                    type: keyword
+                        routePath:
+                            type: text
+                            # TODO analyzer: pathAnalyzer
+                            fields:
+                                raw:
+                                    type: keyword
+                        parentPageUuid:
+                            type: keyword
+                        type:
+                            type: keyword
+                        typeTranslation:
+                            type: keyword
+                        structureType:
+                            type: keyword
+                        changed:
+                            type: date
+                        changerContactId:
+                            type: integer
+                        changerFullName:
+                            type: text
+                            fields:
+                                raw:
+                                    type: keyword
+                        created:
+                            type: date
+                        creatorContactId:
+                            type: integer
+                        creatorFullName:
+                            type: text
+                            fields:
+                                raw:
+                                    type: keyword
+                        authored:
+                            type: date
+                        authorId:
+                            type: integer
+                        authorFullName:
+                            type: text
+                            fields:
+                                raw:
+                                    type: keyword
+                        published:
+                            type: date
+                        teaserDescription:
+                            type: text
+                        teaserMediaId:
+                            type: integer
+                        publishedState:
+                            type: boolean
+                        contentData:
+                            type: binary
+                        localizationState:
+                            properties:
+                                state:
+                                    type: keyword
+                                locale:
+                                    type: keyword
+                        excerpt:
+                            properties:
+                                title:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                description:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                more:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                icon:
+                                    properties:
+                                        id:
+                                            type: integer
+                                        title:
+                                            type: text
+                                            fields:
+                                                raw:
+                                                    type: keyword
+                                        copyright:
+                                            type: text
+                                            fields:
+                                                raw:
+                                                    type: keyword
+                                        formats:
+                                            type: binary
+                                        url:
+                                            type: keyword
+                                images:
+                                    properties:
+                                        id:
+                                            type: integer
+                                        title:
+                                            type: text
+                                            fields:
+                                                raw:
+                                                    type: keyword
+                                        copyright:
+                                            type: text
+                                            fields:
+                                                raw:
+                                                    type: keyword
+                                        formats:
+                                            type: binary
+                                        url:
+                                            type: keyword
+                                tags:
+                                    properties:
+                                        id:
+                                            type: integer
+                                        name:
+                                            type: text
+                                            fields:
+                                                raw:
+                                                    type: keyword
+                                categories:
+                                    properties:
+                                        id:
+                                            type: integer
+                                        key:
+                                            type: keyword
+                                        name:
+                                            type: text
+                                            fields:
+                                                raw:
+                                                    type: keyword
+                                        keywords:
+                                            type: binary
+                        seo:
+                            properties:
+                                title:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                description:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                keywords:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                canonicalUrl:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                noIndex:
+                                    type: boolean
+                                noFollow:
+                                    type: boolean
+                                hideInSitemap:
+                                    type: boolean
+                        pages:
+                            properties:
+                                uuid:
+                                    type: keyword
+                                title:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                routePath:
+                                    type: text
+                                    fields:
+                                        raw:
+                                            type: keyword
+                                pageNumber:
+                                    type: integer
+                                contentData:
+                                    type: binary

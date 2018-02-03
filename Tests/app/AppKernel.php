@@ -9,7 +9,7 @@
  * with this source code in the file LICENSE.
  */
 
-use ONGR\ElasticsearchBundle\ONGRElasticsearchBundle;
+use Pucene\Bundle\PuceneBundle\PuceneBundle;
 use Sulu\Bundle\ArticleBundle\SuluArticleBundle;
 use Sulu\Bundle\TestBundle\Kernel\SuluTestKernel;
 use Symfony\Component\Config\Loader\LoaderInterface;
@@ -24,7 +24,7 @@ class AppKernel extends SuluTestKernel
      */
     public function registerBundles()
     {
-        return array_merge(parent::registerBundles(), [new SuluArticleBundle(), new ONGRElasticsearchBundle()]);
+        return array_merge(parent::registerBundles(), [new PuceneBundle(), new SuluArticleBundle()]);
     }
 
     /**
@@ -38,12 +38,5 @@ class AppKernel extends SuluTestKernel
             $loader->load(__DIR__ . '/config/versioning.yml');
         }
         $loader->load(__DIR__ . '/config/config.yml');
-
-        $esVersion = getenv('ES_VERSION');
-        if (version_compare($esVersion, '2.2', '>=') && version_compare($esVersion, '5.0', '<')) {
-            $loader->load(__DIR__ . '/config/config_es2.yml');
-        } else {
-            $loader->load(__DIR__ . '/config/config_es5.yml');
-        }
     }
 }

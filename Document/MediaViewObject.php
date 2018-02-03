@@ -11,49 +11,35 @@
 
 namespace Sulu\Bundle\ArticleBundle\Document;
 
-use ONGR\ElasticsearchBundle\Annotation\Object;
-use ONGR\ElasticsearchBundle\Annotation\Property;
 use Sulu\Bundle\MediaBundle\Api\Media;
 
 /**
  * Contains the ids and display-options.
- *
- * @Object
  */
 class MediaViewObject
 {
     /**
      * @var int
-     *
-     * @Property(type="integer")
      */
     public $id;
 
     /**
      * @var string
-     *
-     * @Property(type="string", options={"index"="not_analyzed"})
      */
     public $title;
 
     /**
      * @var string
-     *
-     * @Property(type="string", options={"index"="not_analyzed"})
      */
     public $copyright;
 
     /**
      * @var string
-     *
-     * @Property(type="string", options={"index"="not_analyzed"})
      */
     protected $formats = '{}';
 
     /**
      * @var string
-     *
-     * @Property(type="string", options={"index"="not_analyzed"})
      */
     public $url;
 

@@ -11,8 +11,6 @@
 
 namespace Sulu\Bundle\ArticleBundle\Document;
 
-use ONGR\ElasticsearchBundle\Collection\Collection;
-
 /**
  * Interface for indexable article-document.
  */
@@ -428,11 +426,11 @@ interface ArticleViewDocumentInterface
     /**
      * Set pages.
      *
-     * @param Collection $pages
+     * @param array $pages
      *
      * @return $this
      */
-    public function setPages(Collection $pages);
+    public function setPages(array $pages);
 
     /**
      * Returns contentData.

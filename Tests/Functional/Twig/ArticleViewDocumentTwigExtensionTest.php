@@ -11,7 +11,6 @@
 
 namespace Functional\Twig;
 
-use ONGR\ElasticsearchBundle\Service\Manager;
 use Sulu\Bundle\ArticleBundle\Document\ArticleDocument;
 use Sulu\Bundle\ArticleBundle\Twig\ArticleViewDocumentTwigExtension;
 use Sulu\Bundle\TestBundle\Testing\SuluTestCase;
@@ -30,10 +29,9 @@ class ArticleViewDocumentTwigExtensionTest extends SuluTestCase
 
         $this->initPhpcr();
 
-        /** @var Manager $manager */
-        $manager = $this->getContainer()->get('es.manager.default');
+        $manager = $this->getContainer()->get('sulu_article.view_manager.default');
         $manager->dropAndCreateIndex();
-        $manager = $this->getContainer()->get('es.manager.live');
+        $manager = $this->getContainer()->get('sulu_article.view_manager.live');
         $manager->dropAndCreateIndex();
     }
 

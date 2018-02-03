@@ -11,8 +11,9 @@
 
 namespace Sulu\Bundle\ArticleBundle\Content;
 
-use ONGR\ElasticsearchDSL\Query\TermLevel\PrefixQuery;
-use ONGR\ElasticsearchDSL\Search;
+use Sulu\Bundle\ArticleBundle\Elasticsearch\ViewManager;
+use Sulu\Bundle\WebsiteBundle\ReferenceStore\ReferenceStoreInterface;
+use Sulu\Component\DocumentManager\DocumentManagerInterface;
 use Sulu\Component\SmartContent\DatasourceItem;
 
 /**
@@ -20,6 +21,28 @@ use Sulu\Component\SmartContent\DatasourceItem;
  */
 class PageTreeArticleDataProvider extends ArticleDataProvider
 {
+    /**
+     * @var DocumentManagerInterface
+     */
+    private $documentManager;
+
+    public function __construct(
+        ViewManager $viewManager,
+        DocumentManagerInterface $documentManager,
+        ReferenceStoreInterface $referenceStore,
+        ArticleResourceItemFactory $articleResourceItemFactory,
+        $defaultLimit
+    ) {
+        parent::__construct(
+            $viewManager,
+            $referenceStore,
+            $articleResourceItemFactory,
+            $defaultLimit
+        );
+
+        $this->documentManager = $documentManager;
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -54,20 +77,21 @@ class PageTreeArticleDataProvider extends ArticleDataProvider
     /**
      * {@inheritdoc}
      */
-    protected function createSearch(Search $search, array $filters, $locale)
+    protected function createSearchQuery(array $filters, $locale)
     {
         if (!array_key_exists('dataSource', $filters) || !$filters['dataSource']) {
             return;
         }
 
-        $search = parent::createSearch($search, $filters, $locale);
+        $searchQuery = parent::createSearchQuery($filters, $locale);
 
         $document = $this->documentManager->find($filters['dataSource'], $locale);
         if ($document) {
             // the selected data-source could be removed
-            $search->addQuery(new PrefixQuery('route_path.raw', $document->getResourceSegment()));
+            // TODO prefix-query
+            // $searchQuery->must(new PrefixQuery('routePath.raw', $document->getResourceSegment()));
         }
 
-        return $search;
+        return $searchQuery;
     }
 }

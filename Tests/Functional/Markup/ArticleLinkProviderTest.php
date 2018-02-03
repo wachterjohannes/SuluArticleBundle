@@ -11,7 +11,6 @@
 
 namespace Functional\Markup;
 
-use ONGR\ElasticsearchBundle\Service\Manager;
 use Sulu\Bundle\ArticleBundle\Markup\ArticleLinkProvider;
 use Sulu\Bundle\TestBundle\Testing\SuluTestCase;
 
@@ -31,10 +30,9 @@ class ArticleLinkProviderTest extends SuluTestCase
 
         $this->initPhpcr();
 
-        /** @var Manager $manager */
-        $manager = $this->getContainer()->get('es.manager.default');
+        $manager = $this->getContainer()->get('sulu_article.view_manager.default');
         $manager->dropAndCreateIndex();
-        $manager = $this->getContainer()->get('es.manager.live');
+        $manager = $this->getContainer()->get('sulu_article.view_manager.live');
         $manager->dropAndCreateIndex();
 
         $this->articleLinkProvider = $this->getContainer()->get('sulu_article.markup.link_provider');

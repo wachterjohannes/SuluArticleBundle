@@ -11,10 +11,9 @@
 
 namespace Sulu\Bundle\ArticleBundle\Document\Index;
 
-use ONGR\ElasticsearchBundle\Collection\Collection;
-use ONGR\ElasticsearchBundle\Service\Manager;
-use ONGR\ElasticsearchDSL\Query\MatchAllQuery;
-use ONGR\ElasticsearchDSL\Query\TermLevel\TermQuery;
+use Pucene\Component\QueryBuilder\Query\MatchAllQuery;
+use Pucene\Component\QueryBuilder\Query\TermLevel\TermQuery;
+use Pucene\Component\QueryBuilder\Search;
 use Sulu\Bundle\ArticleBundle\Content\PageTreeRouteContentType;
 use Sulu\Bundle\ArticleBundle\Document\ArticleDocument;
 use Sulu\Bundle\ArticleBundle\Document\ArticlePageDocument;
@@ -24,6 +23,7 @@ use Sulu\Bundle\ArticleBundle\Document\Index\Factory\ExcerptFactory;
 use Sulu\Bundle\ArticleBundle\Document\Index\Factory\SeoFactory;
 use Sulu\Bundle\ArticleBundle\Document\LocalizationStateViewObject;
 use Sulu\Bundle\ArticleBundle\Document\Subscriber\RoutableSubscriber;
+use Sulu\Bundle\ArticleBundle\Elasticsearch\ViewManager;
 use Sulu\Bundle\ArticleBundle\Event\Events;
 use Sulu\Bundle\ArticleBundle\Event\IndexEvent;
 use Sulu\Bundle\ArticleBundle\Metadata\ArticleViewDocumentIdTrait;
@@ -67,9 +67,9 @@ class ArticleIndexer implements IndexerInterface
     protected $documentFactory;
 
     /**
-     * @var Manager
+     * @var ViewManager
      */
-    protected $manager;
+    protected $viewManager;
 
     /**
      * @var ExcerptFactory
@@ -101,7 +101,7 @@ class ArticleIndexer implements IndexerInterface
      * @param UserManager $userManager
      * @param ContactRepository $contactRepository
      * @param DocumentFactoryInterface $documentFactory
-     * @param Manager $manager
+     * @param ViewManager $viewManager
      * @param ExcerptFactory $excerptFactory
      * @param SeoFactory $seoFactory
      * @param EventDispatcherInterface $eventDispatcher
@@ -113,7 +113,7 @@ class ArticleIndexer implements IndexerInterface
         UserManager $userManager,
         ContactRepository $contactRepository,
         DocumentFactoryInterface $documentFactory,
-        Manager $manager,
+        ViewManager $viewManager,
         ExcerptFactory $excerptFactory,
         SeoFactory $seoFactory,
         EventDispatcherInterface $eventDispatcher,
@@ -124,7 +124,7 @@ class ArticleIndexer implements IndexerInterface
         $this->userManager = $userManager;
         $this->contactRepository = $contactRepository;
         $this->documentFactory = $documentFactory;
-        $this->manager = $manager;
+        $this->viewManager = $viewManager;
         $this->excerptFactory = $excerptFactory;
         $this->seoFactory = $seoFactory;
         $this->eventDispatcher = $eventDispatcher;
@@ -181,7 +181,11 @@ class ArticleIndexer implements IndexerInterface
             $document->getStructureType()
         );
 
+        $article->setUuid($document->getUuid());
         $article->setTitle($document->getTitle());
+        if (!$article->getLocale()) {
+            $article->setLocale($document->getLocale());
+        }
         $article->setRoutePath($document->getRoutePath());
         $this->setParentPageUuid($structureMetadata, $document, $article);
         $article->setChanged($document->getChanged());
@@ -251,8 +255,7 @@ class ArticleIndexer implements IndexerInterface
     protected function findOrCreateViewDocument(ArticleDocument $document, $locale, $localizationState)
     {
         $articleId = $this->getViewDocumentId($document->getUuid(), $locale);
-        /** @var ArticleViewDocumentInterface $article */
-        $article = $this->manager->find($this->documentFactory->getClass('article'), $articleId);
+        $article = $this->viewManager->get($articleId);
 
         if ($article) {
             // Only index ghosts when the article isn't a ghost himself.
@@ -293,7 +296,7 @@ class ArticleIndexer implements IndexerInterface
             $page->contentData = json_encode($child->getStructure()->toArray());
         }
 
-        $article->setPages(new Collection($pages));
+        $article->setPages($pages);
     }
 
     /**
@@ -351,15 +354,12 @@ class ArticleIndexer implements IndexerInterface
      */
     protected function removeArticle($id)
     {
-        $article = $this->manager->find(
-            $this->documentFactory->getClass('article'),
-            $id
-        );
+        $article = $this->viewManager->get($id);
         if (null === $article) {
             return;
         }
 
-        $this->manager->remove($article);
+        $this->viewManager->delete($article);
     }
 
     /**
@@ -367,12 +367,11 @@ class ArticleIndexer implements IndexerInterface
      */
     public function remove($document)
     {
-        $repository = $this->manager->getRepository($this->documentFactory->getClass('article'));
-        $search = $repository->createSearch()
-            ->addQuery(new TermQuery('uuid', $document->getUuid()))
-            ->setSize(1000);
-        foreach ($repository->findDocuments($search) as $viewDocument) {
-            $this->manager->remove($viewDocument);
+        $search = new Search(new TermQuery('uuid', $document->getUuid()));
+        $search->setSize(1000);
+
+        foreach ($this->viewManager->search($search) as $viewDocument) {
+            $this->viewManager->delete($viewDocument);
         }
     }
 
@@ -381,7 +380,8 @@ class ArticleIndexer implements IndexerInterface
      */
     public function flush()
     {
-        $this->manager->commit();
+        // TODO flush needed?
+        // $this->manager->commit();
     }
 
     /**
@@ -390,22 +390,23 @@ class ArticleIndexer implements IndexerInterface
     public function clear()
     {
         $pageSize = 500;
-        $repository = $this->manager->getRepository($this->documentFactory->getClass('article'));
-        $search = $repository->createSearch()
-            ->addQuery(new MatchAllQuery())
-            ->setSize($pageSize);
+
+        $search = new Search(new MatchAllQuery());
+        $search->setSize($pageSize);
 
         do {
-            $result = $repository->findDocuments($search);
+            $result = $this->viewManager->search($search);
             foreach ($result as $document) {
-                $this->manager->remove($document);
+                $this->viewManager->delete($document);
             }
 
-            $this->manager->commit();
-        } while (0 !== $result->count());
+            // TODO commit needed?
+            // $this->manager->commit();
+        } while (0 !== count($result));
 
-        $this->manager->clearCache();
-        $this->manager->flush();
+        // TODO flush, clearCache needed?
+        // $this->manager->clearCache();
+        // $this->manager->flush();
     }
 
     /**
@@ -414,7 +415,7 @@ class ArticleIndexer implements IndexerInterface
     public function setUnpublished($uuid, $locale)
     {
         $articleId = $this->getViewDocumentId($uuid, $locale);
-        $article = $this->manager->find($this->documentFactory->getClass('article'), $articleId);
+        $article = $this->viewManager->get($articleId);
         if (!$article) {
             return;
         }
@@ -422,7 +423,7 @@ class ArticleIndexer implements IndexerInterface
         $article->setPublished(null);
         $article->setPublishedState(false);
 
-        $this->manager->persist($article);
+        $this->viewManager->index($article);
 
         return $article;
     }
@@ -434,7 +435,7 @@ class ArticleIndexer implements IndexerInterface
     {
         $article = $this->createOrUpdateArticle($document, $document->getLocale());
         $this->dispatchIndexEvent($document, $article);
-        $this->manager->persist($article);
+        $this->viewManager->index($article);
     }
 
     /**
@@ -442,11 +443,7 @@ class ArticleIndexer implements IndexerInterface
      */
     public function dropIndex()
     {
-        if (!$this->manager->indexExists()) {
-            return;
-        }
-
-        $this->manager->dropIndex();
+        $this->viewManager->drop();
     }
 
     /**
@@ -454,10 +451,6 @@ class ArticleIndexer implements IndexerInterface
      */
     public function createIndex()
     {
-        if ($this->manager->indexExists()) {
-            return;
-        }
-
-        $this->manager->createIndex();
+        $this->viewManager->create();
     }
 }

@@ -11,10 +11,10 @@
 
 namespace Sulu\Bundle\ArticleBundle\Markup;
 
-use ONGR\ElasticsearchBundle\Service\Manager;
-use ONGR\ElasticsearchDSL\Query\TermLevel\IdsQuery;
-use ONGR\ElasticsearchDSL\Search;
+use Pucene\Component\QueryBuilder\Query\TermLevel\IdsQuery;
+use Pucene\Component\QueryBuilder\Search;
 use Sulu\Bundle\ArticleBundle\Document\ArticleViewDocumentInterface;
+use Sulu\Bundle\ArticleBundle\Elasticsearch\ViewManager;
 use Sulu\Bundle\ArticleBundle\Metadata\ArticleViewDocumentIdTrait;
 use Sulu\Bundle\ContentBundle\Markup\Link\LinkConfiguration;
 use Sulu\Bundle\ContentBundle\Markup\Link\LinkItem;
@@ -28,14 +28,14 @@ class ArticleLinkProvider implements LinkProviderInterface
     use ArticleViewDocumentIdTrait;
 
     /**
-     * @var Manager
+     * @var ViewManager
      */
-    private $liveManager;
+    private $liveViewManager;
 
     /**
-     * @var Manager
+     * @var ViewManager
      */
-    private $defaultManager;
+    private $defaultViewManager;
 
     /**
      * @var array
@@ -43,26 +43,18 @@ class ArticleLinkProvider implements LinkProviderInterface
     private $types;
 
     /**
-     * @var string
-     */
-    private $articleViewClass;
-
-    /**
-     * @param Manager $liveManager
-     * @param Manager $defaultManager
+     * @param ViewManager $liveViewManager
+     * @param ViewManager $defaultViewManager
      * @param array $types
-     * @param string $articleViewClass
      */
     public function __construct(
-        Manager $liveManager,
-        Manager $defaultManager,
-        array $types,
-        $articleViewClass
+        ViewManager $liveViewManager,
+        ViewManager $defaultViewManager,
+        array $types
     ) {
-        $this->liveManager = $liveManager;
-        $this->defaultManager = $defaultManager;
+        $this->liveViewManager = $liveViewManager;
+        $this->defaultViewManager = $defaultViewManager;
         $this->types = $types;
-        $this->articleViewClass = $articleViewClass;
     }
 
     /**
@@ -93,16 +85,14 @@ class ArticleLinkProvider implements LinkProviderInterface
      */
     public function preload(array $hrefs, $locale, $published = true)
     {
-        $search = new Search();
-        $search->addQuery(new IdsQuery($this->getViewDocumentIds($hrefs, $locale)));
+        $search = new Search(new IdsQuery($this->getViewDocumentIds($hrefs, $locale)));
         $search->setSize(count($hrefs));
 
-        $repository = $this->liveManager->getRepository($this->articleViewClass);
         if (!$published) {
-            $repository = $this->defaultManager->getRepository($this->articleViewClass);
+            $documents = $this->defaultViewManager->search($search);
+        } else {
+            $documents = $this->liveViewManager->search($search);
         }
-
-        $documents = $repository->findDocuments($search);
 
         $result = [];
         /** @var ArticleViewDocumentInterface $document */

@@ -11,9 +11,9 @@
 
 namespace Sulu\Bundle\ArticleBundle\Content;
 
-use ONGR\ElasticsearchBundle\Service\Manager;
-use ONGR\ElasticsearchDSL\Query\TermLevel\IdsQuery;
-use Sulu\Bundle\ArticleBundle\Document\ArticleViewDocumentInterface;
+use Pucene\Component\QueryBuilder\Query\TermLevel\IdsQuery;
+use Pucene\Component\QueryBuilder\Search;
+use Sulu\Bundle\ArticleBundle\Elasticsearch\ViewManager;
 use Sulu\Bundle\ArticleBundle\Metadata\ArticleViewDocumentIdTrait;
 use Sulu\Bundle\WebsiteBundle\ReferenceStore\ReferenceStoreInterface;
 use Sulu\Component\Content\Compat\PropertyInterface;
@@ -28,9 +28,9 @@ class ArticleSelectionContentType extends SimpleContentType implements PreResolv
     use ArticleViewDocumentIdTrait;
 
     /**
-     * @var Manager
+     * @var ViewManager
      */
-    private $searchManager;
+    private $viewManager;
 
     /**
      * @var ReferenceStoreInterface
@@ -40,30 +40,19 @@ class ArticleSelectionContentType extends SimpleContentType implements PreResolv
     /**
      * @var string
      */
-    private $articleDocumentClass;
-
-    /**
-     * @var string
-     */
     private $template;
 
     /**
-     * @param Manager $searchManager
+     * @param ViewManager $viewManager
      * @param ReferenceStoreInterface $referenceStore
-     * @param string $articleDocumentClass
      * @param string $template
      */
-    public function __construct(
-        Manager $searchManager,
-        ReferenceStoreInterface $referenceStore,
-        $articleDocumentClass,
-        $template
-    ) {
+    public function __construct(ViewManager $viewManager, ReferenceStoreInterface $referenceStore, $template)
+    {
         parent::__construct('Article', []);
 
-        $this->searchManager = $searchManager;
+        $this->viewManager = $viewManager;
         $this->referenceStore = $referenceStore;
-        $this->articleDocumentClass = $articleDocumentClass;
         $this->template = $template;
     }
 
@@ -78,14 +67,10 @@ class ArticleSelectionContentType extends SimpleContentType implements PreResolv
         }
 
         $locale = $property->getStructure()->getLanguageCode();
-
-        $repository = $this->searchManager->getRepository($this->articleDocumentClass);
-        $search = $repository->createSearch();
-        $search->addQuery(new IdsQuery($this->getViewDocumentIds($value, $locale)));
+        $search = new Search(new IdsQuery($this->getViewDocumentIds($value, $locale)));
 
         $result = [];
-        /** @var ArticleViewDocumentInterface $articleDocument */
-        foreach ($repository->findDocuments($search) as $articleDocument) {
+        foreach ($this->viewManager->search($search) as $articleDocument) {
             $result[array_search($articleDocument->getUuid(), $value, false)] = $articleDocument;
         }
 

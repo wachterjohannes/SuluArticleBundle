@@ -11,57 +11,28 @@
 
 namespace Sulu\Bundle\ArticleBundle\Document;
 
-use ONGR\ElasticsearchBundle\Annotation\Object;
-use ONGR\ElasticsearchBundle\Annotation\Property;
-
 /**
  * Contains excerpt information for articles.
- *
- * @Object
  */
 class CategoryViewObject
 {
     /**
      * @var int
-     *
-     * @Property(type="integer")
      */
     public $id;
 
     /**
      * @var string
-     *
-     * @Property(
-     *     type="string",
-     *     options={
-     *        "fields"={
-     *            "raw"={"type"="string", "index"="not_analyzed"},
-     *            "value"={"type"="string"}
-     *        }
-     *    }
-     * )
      */
     public $name;
 
     /**
      * @var string
-     *
-     * @Property(
-     *     type="string",
-     *     options={
-     *        "fields"={
-     *            "raw"={"type"="string", "index"="not_analyzed"},
-     *            "value"={"type"="string"}
-     *        }
-     *    }
-     * )
      */
     public $key;
 
     /**
      * @var string[]
-     *
-     * @Property(type="string")
      */
     public $keywords = [];
 }

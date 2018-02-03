@@ -12,7 +12,6 @@
 namespace Functional\Content;
 
 use Ferrandini\Urlizer;
-use ONGR\ElasticsearchBundle\Service\Manager;
 use Ramsey\Uuid\Uuid;
 use Sulu\Bundle\ContentBundle\Document\PageDocument;
 use Sulu\Bundle\TestBundle\Testing\SuluTestCase;
@@ -30,12 +29,9 @@ class PageTreeArticleDataProviderTest extends SuluTestCase
 
         $this->initPhpcr();
 
-        /** @var Manager $manager */
-        $manager = $this->getContainer()->get('es.manager.default');
+        $manager = $this->getContainer()->get('sulu_article.view_manager.default');
         $manager->dropAndCreateIndex();
-
-        /** @var Manager $manager */
-        $manager = $this->getContainer()->get('es.manager.live');
+        $manager = $this->getContainer()->get('sulu_article.view_manager.live');
         $manager->dropAndCreateIndex();
     }
 

@@ -12,7 +12,6 @@
 namespace Functional\Controller;
 
 use Ferrandini\Urlizer;
-use ONGR\ElasticsearchBundle\Service\Manager;
 use Sulu\Bundle\ArticleBundle\Document\ArticleViewDocument;
 use Sulu\Bundle\ArticleBundle\Document\ArticleViewDocumentInterface;
 use Sulu\Bundle\ArticleBundle\Document\Index\IndexerInterface;
@@ -282,18 +281,11 @@ class ArticlePageControllerTest extends SuluTestCase
         $indexer->clear();
     }
 
-    /**
-     * @param $uuid
-     * @param $locale
-     *
-     * @return ArticleViewDocumentInterface
-     */
     private function findViewDocument($uuid, $locale)
     {
-        /** @var Manager $manager */
-        $manager = $this->getContainer()->get('es.manager.default');
+        $manager = $this->getContainer()->get('sulu_article.view_manager.default');
 
-        return $manager->find(ArticleViewDocument::class, $this->getViewDocumentId($uuid, $locale));
+        return $manager->get($this->getViewDocumentId($uuid, $locale));
     }
 
     private function getRoute($title, $page)

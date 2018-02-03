@@ -11,10 +11,10 @@
 
 namespace Sulu\Bundle\ArticleBundle\Document\Index;
 
-use ONGR\ElasticsearchBundle\Service\Manager;
 use Sulu\Bundle\ArticleBundle\Document\ArticleDocument;
 use Sulu\Bundle\ArticleBundle\Document\Index\Factory\ExcerptFactory;
 use Sulu\Bundle\ArticleBundle\Document\Index\Factory\SeoFactory;
+use Sulu\Bundle\ArticleBundle\Elasticsearch\ViewManager;
 use Sulu\Bundle\ContactBundle\Entity\ContactRepository;
 use Sulu\Bundle\SecurityBundle\UserManager\UserManager;
 use Sulu\Component\Content\Document\LocalizationState;
@@ -45,7 +45,7 @@ class ArticleGhostIndexer extends ArticleIndexer
      * @param UserManager $userManager
      * @param ContactRepository $contactRepository
      * @param DocumentFactoryInterface $documentFactory
-     * @param Manager $manager
+     * @param ViewManager $viewManager
      * @param ExcerptFactory $excerptFactory
      * @param SeoFactory $seoFactory
      * @param EventDispatcherInterface $eventDispatcher
@@ -59,7 +59,7 @@ class ArticleGhostIndexer extends ArticleIndexer
         UserManager $userManager,
         ContactRepository $contactRepository,
         DocumentFactoryInterface $documentFactory,
-        Manager $manager,
+        ViewManager $viewManager,
         ExcerptFactory $excerptFactory,
         SeoFactory $seoFactory,
         EventDispatcherInterface $eventDispatcher,
@@ -73,7 +73,7 @@ class ArticleGhostIndexer extends ArticleIndexer
             $userManager,
             $contactRepository,
             $documentFactory,
-            $manager,
+            $viewManager,
             $excerptFactory,
             $seoFactory,
             $eventDispatcher,
@@ -93,7 +93,7 @@ class ArticleGhostIndexer extends ArticleIndexer
         $article = $this->createOrUpdateArticle($document, $document->getLocale());
         $this->createOrUpdateGhosts($document);
         $this->dispatchIndexEvent($document, $article);
-        $this->manager->persist($article);
+        $this->viewManager->index($article);
     }
 
     /**
@@ -123,7 +123,7 @@ class ArticleGhostIndexer extends ArticleIndexer
             );
 
             if ($article) {
-                $this->manager->persist($article);
+                $this->viewManager->index($article);
             }
         }
     }

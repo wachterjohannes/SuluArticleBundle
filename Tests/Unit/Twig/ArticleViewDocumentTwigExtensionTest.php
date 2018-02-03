@@ -11,7 +11,6 @@
 
 namespace Sulu\Bundle\ArticleBundle\Tests\Unit\Twig;
 
-use ONGR\ElasticsearchBundle\Result\DocumentIterator;
 use Sulu\Bundle\ArticleBundle\Content\ArticleResourceItem;
 use Sulu\Bundle\ArticleBundle\Content\ArticleResourceItemFactory;
 use Sulu\Bundle\ArticleBundle\Document\ArticleDocument;
@@ -32,7 +31,6 @@ class ArticleViewDocumentTwigExtensionTest extends \PHPUnit_Framework_TestCase
         $articleDocuments = $this->getArticleDocuments();
         $articleViewDocuments = $this->getArticleViewDocuments($articleDocuments);
         $articleResourceItems = $this->getArticleResourceItems($articleDocuments, $articleViewDocuments);
-        $documentIterator = $this->getDocumentIterator($articleViewDocuments);
         $metadataFactory = $this->getMetadataFactory();
 
         $articleViewDocumentRepository = $this->prophesize(ArticleViewDocumentRepository::class);
@@ -43,7 +41,7 @@ class ArticleViewDocumentTwigExtensionTest extends \PHPUnit_Framework_TestCase
                 $articleDocuments[0]->getStructureType(),
             ],
             $articleDocuments[0]->getLocale()
-        )->willReturn($documentIterator);
+        )->willReturn($articleViewDocuments);
 
         $articleResourceItemFactory = $this->prophesize(ArticleResourceItemFactory::class);
         $articleResourceItemFactory->createResourceItem($articleViewDocuments[1])->willReturn($articleResourceItems[1]);
@@ -82,7 +80,6 @@ class ArticleViewDocumentTwigExtensionTest extends \PHPUnit_Framework_TestCase
         $articleDocuments = $this->getArticleDocuments();
         $articleViewDocuments = $this->getArticleViewDocuments($articleDocuments);
         $articleResourceItems = $this->getArticleResourceItems($articleDocuments, $articleViewDocuments);
-        $documentIterator = $this->getDocumentIterator($articleViewDocuments);
         $metadataFactory = $this->getMetadataFactory();
 
         $articleViewDocumentRepository = $this->prophesize(ArticleViewDocumentRepository::class);
@@ -93,7 +90,7 @@ class ArticleViewDocumentTwigExtensionTest extends \PHPUnit_Framework_TestCase
                 $articleDocuments[0]->getStructureType(),
             ],
             $articleDocuments[0]->getLocale()
-        )->willReturn($documentIterator);
+        )->willReturn($articleViewDocuments);
 
         $articleResourceItemFactory = $this->prophesize(ArticleResourceItemFactory::class);
         $articleResourceItemFactory->createResourceItem($articleViewDocuments[1])->willReturn($articleResourceItems[1]);
@@ -195,31 +192,5 @@ class ArticleViewDocumentTwigExtensionTest extends \PHPUnit_Framework_TestCase
         }
 
         return $articleResourceItems;
-    }
-
-    /**
-     * @param array $articleViewDocuments
-     *
-     * @return DocumentIterator
-     */
-    private function getDocumentIterator(array $articleViewDocuments)
-    {
-        $documentIteratorCount = 1;
-
-        $documentIterator = $this->prophesize(DocumentIterator::class);
-        $documentIterator->rewind()->willReturn(0);
-        $documentIterator->next()->willReturn($documentIteratorCount);
-        $documentIterator->current()->will(function() use (&$documentIteratorCount, $articleViewDocuments) {
-            return $articleViewDocuments[$documentIteratorCount++];
-        });
-        $documentIterator->valid()->will(function() use (&$documentIteratorCount, $articleViewDocuments) {
-            if (array_key_exists($documentIteratorCount, $articleViewDocuments)) {
-                return true;
-            }
-
-            return false;
-        });
-
-        return $documentIterator;
     }
 }

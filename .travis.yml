@@ -5,8 +5,6 @@ env:
     - JAVA_HOME="/usr/lib/jvm/java-8-oracle/jre"
     - JACKRABBIT_VERSION=2.12.0
     - SYMFONY__PHPCR__TRANSPORT=doctrinedbal
-    - ES_VERSION="5.3.0"
-    - ES_DOWNLOAD_URL="https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${ES_VERSION}.zip"
 
 cache:
   directories:
@@ -16,10 +14,6 @@ cache:
 matrix:
   include:
     - php: 5.5
-      env:
-        - COMPOSER_FLAGS="--prefer-lowest --prefer-dist --no-interaction"
-        - ES_VERSION="2.4.4"
-        - ES_DOWNLOAD_URL="https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-${ES_VERSION}.zip"
     - php: 7.0
       env:
         - COMPOSER_FLAGS="--prefer-dist --no-interaction"
@@ -47,9 +41,6 @@ before_install:
   - if [[ -z $CODE_COVERAGE ]]; then phpenv config-rm xdebug.ini ; fi
   - phpenv config-add Tests/travis.php.ini
   - composer self-update
-  - curl -L -o elasticsearch.zip ${ES_DOWNLOAD_URL}
-  - unzip elasticsearch.zip
-  - ./elasticsearch-*/bin/elasticsearch -d
 
 install:
   - if [[ $PHPSTAN == 'true' ]]; then travis_retry composer require --dev phpstan/phpstan $COMPOSER_FLAGS ; else travis_retry composer update $COMPOSER_FLAGS ; fi
@@ -57,8 +48,7 @@ install:
   - ./Tests/app/console doctrine:database:create
   - ./Tests/app/console doctrine:schema:update --force
   - ./Tests/app/console sulu:document:initialize
-  - ./Tests/app/console ongr:es:index:create -m default
-  - ./Tests/app/console ongr:es:index:create -m live
+  - ./Tests/app/console pucene:indices:create
 
 script:
   - ./vendor/bin/phpunit $CODE_COVERAGE

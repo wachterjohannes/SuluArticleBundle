@@ -11,11 +11,11 @@
 
 namespace Sulu\Bundle\ArticleBundle\Sitemap;
 
-use ONGR\ElasticsearchBundle\Service\Manager;
-use ONGR\ElasticsearchBundle\Service\Repository;
-use ONGR\ElasticsearchDSL\Query\TermLevel\TermQuery;
+use Pucene\Component\QueryBuilder\Query\TermLevel\TermQuery;
+use Pucene\Component\QueryBuilder\Search;
 use Sulu\Bundle\ArticleBundle\Document\ArticleViewDocumentInterface;
 use Sulu\Bundle\ArticleBundle\Document\Index\DocumentFactoryInterface;
+use Sulu\Bundle\ArticleBundle\Elasticsearch\ViewManager;
 use Sulu\Bundle\WebsiteBundle\Sitemap\Sitemap;
 use Sulu\Bundle\WebsiteBundle\Sitemap\SitemapAlternateLink;
 use Sulu\Bundle\WebsiteBundle\Sitemap\SitemapProviderInterface;
@@ -27,22 +27,18 @@ use Sulu\Bundle\WebsiteBundle\Sitemap\SitemapUrl;
 class ArticleSitemapProvider implements SitemapProviderInterface
 {
     /**
-     * @var Manager
+     * @var ViewManager
      */
-    private $manager;
+    private $viewManager;
 
     /**
      * @var DocumentFactoryInterface
      */
     private $documentFactory;
 
-    /**
-     * @param Manager $manager
-     * @param DocumentFactoryInterface $documentFactory
-     */
-    public function __construct(Manager $manager, DocumentFactoryInterface $documentFactory)
+    public function __construct(ViewManager $viewManager, DocumentFactoryInterface $documentFactory)
     {
-        $this->manager = $manager;
+        $this->viewManager = $viewManager;
         $this->documentFactory = $documentFactory;
     }
 
@@ -51,14 +47,12 @@ class ArticleSitemapProvider implements SitemapProviderInterface
      */
     public function build($page, $portalKey)
     {
-        $repository = $this->manager->getRepository($this->documentFactory->getClass('article'));
-
         $result = [];
 
         $from = 0;
         $size = 1000;
         do {
-            $bulk = $this->getBulk($repository, $from, $size);
+            $bulk = $this->getBulk($from, $size);
             /** @var SitemapUrl[] $alternatives */
             $sitemapUrlListByUuid = [];
 
@@ -110,14 +104,13 @@ class ArticleSitemapProvider implements SitemapProviderInterface
         return $sitemapUrlList;
     }
 
-    private function getBulk(Repository $repository, $from, $size)
+    private function getBulk(int $from, int $size = 1000)
     {
-        $search = $repository->createSearch()
-            ->addQuery(new TermQuery('seo.hide_in_sitemap', 'false'))
-            ->setFrom($from)
-            ->setSize($size);
+        $search = new Search(new TermQuery('seo.hide_in_sitemap', 'false'));
+        $search->setFrom($from);
+        $search->setSize($size);
 
-        return $repository->findDocuments($search);
+        return $this->viewManager->search($search);
     }
 
     /**
@@ -133,10 +126,9 @@ class ArticleSitemapProvider implements SitemapProviderInterface
      */
     public function getMaxPage()
     {
-        $repository = $this->manager->getRepository($this->documentFactory->getClass('article'));
-        $search = $repository->createSearch()
-            ->addQuery(new TermQuery('seo.hide_in_sitemap', 'false'));
+        $search = new Search(new TermQuery('seo.hide_in_sitemap', 'false'));
+        $total = $this->viewManager->count($search);
 
-        return ceil($repository->count($search) / self::PAGE_SIZE);
+        return ceil($total / self::PAGE_SIZE);
     }
 }

@@ -13,7 +13,6 @@ namespace Sulu\Bundle\ArticleBundle\Document\Index\Factory;
 
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query\Expr\Join;
-use ONGR\ElasticsearchBundle\Collection\Collection;
 use Sulu\Bundle\ArticleBundle\Document\CategoryViewObject;
 
 /**
@@ -42,12 +41,12 @@ class CategoryCollectionFactory
      * @param int[] $categoryIds
      * @param string $locale
      *
-     * @return Collection
+     * @return CategoryViewObject[]
      */
     public function create($categoryIds, $locale)
     {
         if (empty($categoryIds)) {
-            return new Collection();
+            return [];
         }
 
         // Load category with keywords
@@ -74,6 +73,6 @@ class CategoryCollectionFactory
             $categories[$id]->keywords[] = $categoryData['keyword'];
         }
 
-        return new Collection(array_values($categories));
+        return array_values($categories);
     }
 }

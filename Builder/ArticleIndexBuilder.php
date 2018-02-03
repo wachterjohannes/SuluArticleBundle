@@ -11,7 +11,7 @@
 
 namespace Sulu\Bundle\ArticleBundle\Builder;
 
-use ONGR\ElasticsearchBundle\Service\Manager;
+use Sulu\Bundle\ArticleBundle\Elasticsearch\ViewManager;
 use Sulu\Bundle\CoreBundle\Build\SuluBuilder;
 
 /**
@@ -40,8 +40,8 @@ class ArticleIndexBuilder extends SuluBuilder
      */
     public function build()
     {
-        $this->buildForManager($this->container->get('es.manager.live'), $this->input->getOption('destroy'));
-        $this->buildForManager($this->container->get('es.manager.default'), $this->input->getOption('destroy'));
+        $this->buildForManager($this->container->get('sulu_article.view_manager.default'), $this->input->getOption('destroy'));
+        $this->buildForManager($this->container->get('sulu_article.view_manager.live'), $this->input->getOption('destroy'));
     }
 
     /**
@@ -51,15 +51,15 @@ class ArticleIndexBuilder extends SuluBuilder
      * If index exists and destroy flag is true - drop and create index.
      * Else do nothing.
      *
-     * @param Manager $manager
+     * @param ViewManager $viewManager
      * @param bool $destroy
      */
-    private function buildForManager(Manager $manager, $destroy)
+    private function buildForManager(ViewManager $viewManager, $destroy)
     {
-        $name = $manager->getName();
-        if (!$manager->indexExists()) {
+        $name = $viewManager->getName();
+        if (!$viewManager->indexExists()) {
             $this->output->writeln(sprintf('Create index for "<comment>%s</comment>" manager.', $name));
-            $manager->createIndex();
+            $viewManager->createIndex();
 
             return;
         }
@@ -69,6 +69,7 @@ class ArticleIndexBuilder extends SuluBuilder
         }
 
         $this->output->writeln(sprintf('Drop and create index for "<comment>%s</comment>" manager.', $name));
-        $manager->dropAndCreateIndex();
+        $viewManager->drop();
+        $viewManager->create();
     }
 }

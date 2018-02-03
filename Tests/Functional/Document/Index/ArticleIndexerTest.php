@@ -11,16 +11,18 @@
 
 namespace Functional\Document\Index;
 
-use ONGR\ElasticsearchBundle\Service\Manager;
 use Ramsey\Uuid\Uuid;
 use Sulu\Bundle\ArticleBundle\Document\ArticleViewDocument;
 use Sulu\Bundle\ArticleBundle\Document\Index\ArticleIndexer;
+use Sulu\Bundle\ArticleBundle\Metadata\ArticleViewDocumentIdTrait;
 use Sulu\Bundle\ContentBundle\Document\PageDocument;
 use Sulu\Bundle\TestBundle\Testing\SuluTestCase;
 use Sulu\Component\DocumentManager\DocumentManagerInterface;
 
 class ArticleIndexerTest extends SuluTestCase
 {
+    use ArticleViewDocumentIdTrait;
+
     /**
      * @var string
      */
@@ -30,11 +32,6 @@ class ArticleIndexerTest extends SuluTestCase
      * @var DocumentManagerInterface
      */
     private $documentManager;
-
-    /**
-     * @var Manager
-     */
-    private $manager;
 
     /**
      * @var ArticleIndexer
@@ -51,7 +48,6 @@ class ArticleIndexerTest extends SuluTestCase
         $this->initPhpcr();
         $this->purgeDatabase();
 
-        $this->manager = $this->getContainer()->get('es.manager.live');
         $this->documentManager = $this->getContainer()->get('sulu_document_manager.document_manager');
         $this->indexer = $this->getContainer()->get('sulu_article.elastic_search.article_live_indexer');
         $this->indexer->clear();
@@ -228,6 +224,8 @@ class ArticleIndexerTest extends SuluTestCase
      */
     private function findViewDocument($uuid)
     {
-        return $this->manager->find(ArticleViewDocument::class, $uuid . '-' . $this->locale);
+        $manager = $this->getContainer()->get('sulu_article.view_manager.live');
+
+        return $manager->get($this->getViewDocumentId($uuid, $this->locale));
     }
 }

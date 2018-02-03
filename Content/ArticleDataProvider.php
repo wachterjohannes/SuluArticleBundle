@@ -11,19 +11,15 @@
 
 namespace Sulu\Bundle\ArticleBundle\Content;
 
-use ONGR\ElasticsearchBundle\Service\Manager;
-use ONGR\ElasticsearchDSL\Query\Compound\BoolQuery;
-use ONGR\ElasticsearchDSL\Query\MatchAllQuery;
-use ONGR\ElasticsearchDSL\Query\TermLevel\TermQuery;
-use ONGR\ElasticsearchDSL\Search;
-use ONGR\ElasticsearchDSL\Sort\FieldSort;
-use ProxyManager\Factory\LazyLoadingValueHolderFactory;
-use ProxyManager\Proxy\LazyLoadingInterface;
-use Sulu\Bundle\ArticleBundle\Document\ArticleDocument;
+use Pucene\Component\QueryBuilder\Query\Compound\BoolQuery;
+use Pucene\Component\QueryBuilder\Query\MatchAllQuery;
+use Pucene\Component\QueryBuilder\Query\QueryInterface;
+use Pucene\Component\QueryBuilder\Query\TermLevel\TermQuery;
+use Pucene\Component\QueryBuilder\Search;
 use Sulu\Bundle\ArticleBundle\Document\ArticleViewDocumentInterface;
+use Sulu\Bundle\ArticleBundle\Elasticsearch\ViewManager;
 use Sulu\Bundle\WebsiteBundle\ReferenceStore\ReferenceStoreInterface;
 use Sulu\Component\Content\Compat\PropertyParameter;
-use Sulu\Component\DocumentManager\DocumentManagerInterface;
 use Sulu\Component\SmartContent\Configuration\Builder;
 use Sulu\Component\SmartContent\Configuration\BuilderInterface;
 use Sulu\Component\SmartContent\DataProviderAliasInterface;
@@ -36,19 +32,9 @@ use Sulu\Component\SmartContent\DataProviderResult;
 class ArticleDataProvider implements DataProviderInterface, DataProviderAliasInterface
 {
     /**
-     * @var Manager
+     * @var ViewManager
      */
-    protected $searchManager;
-
-    /**
-     * @var DocumentManagerInterface
-     */
-    protected $documentManager;
-
-    /**
-     * @var LazyLoadingValueHolderFactory
-     */
-    protected $proxyFactory;
+    protected $viewManager;
 
     /**
      * @var ReferenceStoreInterface
@@ -61,39 +47,25 @@ class ArticleDataProvider implements DataProviderInterface, DataProviderAliasInt
     protected $articleResourceItemFactory;
 
     /**
-     * @var string
-     */
-    protected $articleDocumentClass;
-
-    /**
      * @var int
      */
     protected $defaultLimit;
 
     /**
-     * @param Manager $searchManager
-     * @param DocumentManagerInterface $documentManager
-     * @param LazyLoadingValueHolderFactory $proxyFactory
+     * @param ViewManager $viewManager
      * @param ReferenceStoreInterface $referenceStore
      * @param ArticleResourceItemFactory $articleResourceItemFactory
-     * @param string $articleDocumentClass
      * @param int $defaultLimit
      */
     public function __construct(
-        Manager $searchManager,
-        DocumentManagerInterface $documentManager,
-        LazyLoadingValueHolderFactory $proxyFactory,
+        ViewManager $viewManager,
         ReferenceStoreInterface $referenceStore,
         ArticleResourceItemFactory $articleResourceItemFactory,
-        $articleDocumentClass,
         $defaultLimit
     ) {
-        $this->searchManager = $searchManager;
-        $this->documentManager = $documentManager;
-        $this->proxyFactory = $proxyFactory;
+        $this->viewManager = $viewManager;
         $this->referenceStore = $referenceStore;
         $this->articleResourceItemFactory = $articleResourceItemFactory;
-        $this->articleDocumentClass = $articleDocumentClass;
         $this->defaultLimit = $defaultLimit;
     }
 
@@ -160,7 +132,10 @@ class ArticleDataProvider implements DataProviderInterface, DataProviderAliasInt
             $result[] = new ArticleDataItem($document->getUuid(), $document->getTitle(), $document);
         }
 
-        return new DataProviderResult($result, $this->hasNextPage($queryResult, $limit, $page, $pageSize));
+        $total = $this->viewManager->total();
+        $hasNextPage = $this->hasNextPage($total, $limit, $page, $pageSize);
+
+        return new DataProviderResult($result, $hasNextPage);
     }
 
     /**
@@ -186,7 +161,10 @@ class ArticleDataProvider implements DataProviderInterface, DataProviderAliasInt
             $result[] = $this->articleResourceItemFactory->createResourceItem($document);
         }
 
-        return new DataProviderResult($result, $this->hasNextPage($queryResult, $limit, $page, $pageSize));
+        $total = $this->viewManager->total();
+        $hasNextPage = $this->hasNextPage($total, $limit, $page, $pageSize);
+
+        return new DataProviderResult($result, $hasNextPage);
     }
 
     /**
@@ -201,16 +179,15 @@ class ArticleDataProvider implements DataProviderInterface, DataProviderAliasInt
      * Returns flag "hasNextPage".
      * It combines the limit/query-count with the page and page-size.
      *
-     * @param \Countable $queryResult
+     * @param int $count
      * @param int $limit
      * @param int $page
      * @param int $pageSize
      *
      * @return bool
      */
-    private function hasNextPage(\Countable $queryResult, $limit, $page, $pageSize)
+    private function hasNextPage($count, $limit, $page, $pageSize)
     {
-        $count = $queryResult->count();
         if ($limit && $limit < $count) {
             $count = $limit;
         }
@@ -227,16 +204,16 @@ class ArticleDataProvider implements DataProviderInterface, DataProviderAliasInt
      * @param int $pageSize
      * @param string $locale
      *
-     * @return \Countable
+     * @return ArticleViewDocumentInterface[]
      */
     private function getSearchResult(array $filters, $limit, $page, $pageSize, $locale)
     {
-        $repository = $this->searchManager->getRepository($this->articleDocumentClass);
-        $search = $this->createSearch($repository->createSearch(), $filters, $locale);
-        if (!$search) {
-            return new \ArrayIterator([]);
+        $query = $this->createSearchQuery($filters, $locale);
+        if (!$query) {
+            return [];
         }
 
+        $search = new Search($query);
         $this->addPagination($search, $pageSize, $page, $limit);
 
         if (array_key_exists('sortBy', $filters) && is_array($filters['sortBy'])) {
@@ -244,23 +221,24 @@ class ArticleDataProvider implements DataProviderInterface, DataProviderAliasInt
             $this->appendSortBy($filters['sortBy'], $sortMethod, $search);
         }
 
-        return $repository->findDocuments($search);
+        return $this->viewManager->search($search);
     }
 
     /**
-     * Initialize search with neccesary queries.
+     * Initialize search with necessary queries.
      *
-     * @param Search $search
      * @param array $filters
      * @param string $locale
      *
-     * @return Search
+     * @return QueryInterface
      */
-    protected function createSearch(Search $search, array $filters, $locale)
+    protected function createSearchQuery(array $filters, $locale)
     {
+        $searchQuery = new BoolQuery();
+
         if (0 < count($filters['excluded'])) {
             foreach ($filters['excluded'] as $uuid) {
-                $search->addQuery(new TermQuery('uuid', $uuid), BoolQuery::MUST_NOT);
+                $searchQuery->mustNot(new TermQuery('uuid', $uuid));
             }
         }
 
@@ -278,24 +256,24 @@ class ArticleDataProvider implements DataProviderInterface, DataProviderAliasInt
         $this->addBoolQuery('websiteCategories', $filters, 'excerpt.categories.id', $operator, $query, $queriesCount);
 
         if (null !== $locale) {
-            $search->addQuery(new TermQuery('locale', $locale));
+            $searchQuery->must(new TermQuery('locale', $locale));
         }
 
         if (array_key_exists('types', $filters) && $filters['types']) {
             $typesQuery = new BoolQuery();
             foreach ($filters['types'] as $typeFilter) {
-                $typesQuery->add(new TermQuery('type', $typeFilter), BoolQuery::SHOULD);
+                $typesQuery->should(new TermQuery('type', $typeFilter));
             }
-            $search->addQuery($typesQuery);
+            $searchQuery->must($typesQuery);
         }
 
         if (0 === $queriesCount) {
-            $search->addQuery(new MatchAllQuery(), BoolQuery::MUST);
+            $searchQuery->must(new MatchAllQuery());
         } else {
-            $search->addQuery($query, BoolQuery::MUST);
+            $searchQuery->must($query);
         }
 
-        return $search;
+        return $searchQuery;
     }
 
     /**
@@ -352,7 +330,8 @@ class ArticleDataProvider implements DataProviderInterface, DataProviderAliasInt
     private function appendSortBy($sortBy, $sortMethod, $search)
     {
         foreach ($sortBy as $column) {
-            $search->addSort(new FieldSort($column, $sortMethod));
+            // TODO field-sort
+            // $search->addSort(new FieldSort($column, $sortMethod));
         }
     }
 
@@ -402,7 +381,7 @@ class ArticleDataProvider implements DataProviderInterface, DataProviderAliasInt
     {
         if (0 !== count($tags = $this->getFilter($filters, $filterName))) {
             ++$queriesCount;
-            $query->add($this->getBoolQuery($field, $tags, $operator));
+            $query->must($this->getBoolQuery($field, $tags, $operator));
         }
     }
 
@@ -417,11 +396,13 @@ class ArticleDataProvider implements DataProviderInterface, DataProviderAliasInt
      */
     private function getBoolQuery($field, array $values, $operator)
     {
-        $type = ('or' === strtolower($operator) ? BoolQuery::SHOULD : BoolQuery::MUST);
-
         $query = new BoolQuery();
         foreach ($values as $value) {
-            $query->add(new TermQuery($field, $value), $type);
+            if (strtolower($operator) === 'or') {
+                $query->should(new TermQuery($field, $value));
+            } else {
+                $query->must(new TermQuery($field, $value));
+            }
         }
 
         return $query;
@@ -456,33 +437,6 @@ class ArticleDataProvider implements DataProviderInterface, DataProviderAliasInt
     private function hasFilter(array $filters, $name)
     {
         return array_key_exists($name, $filters) && null !== $filters[$name];
-    }
-
-    /**
-     * Returns Proxy document for uuid.
-     *
-     * @param string $uuid
-     * @param string $locale
-     *
-     * @return object
-     */
-    private function getResource($uuid, $locale)
-    {
-        return $this->proxyFactory->createProxy(
-            ArticleDocument::class,
-            function (
-                &$wrappedObject,
-                LazyLoadingInterface $proxy,
-                $method,
-                array $parameters,
-                &$initializer
-            ) use ($uuid, $locale) {
-                $initializer = null;
-                $wrappedObject = $this->documentManager->find($uuid, $locale);
-
-                return true;
-            }
-        );
     }
 
     /**

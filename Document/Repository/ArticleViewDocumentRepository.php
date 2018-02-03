@@ -11,14 +11,13 @@
 
 namespace Sulu\Bundle\ArticleBundle\Document\Repository;
 
-use ONGR\ElasticsearchBundle\Result\DocumentIterator;
-use ONGR\ElasticsearchBundle\Service\Manager;
-use ONGR\ElasticsearchBundle\Service\Repository;
-use ONGR\ElasticsearchDSL\Query\Compound\BoolQuery;
-use ONGR\ElasticsearchDSL\Query\Specialized\MoreLikeThisQuery;
-use ONGR\ElasticsearchDSL\Query\TermLevel\TermQuery;
-use ONGR\ElasticsearchDSL\Search;
-use ONGR\ElasticsearchDSL\Sort\FieldSort;
+use Pucene\Component\QueryBuilder\Query\Compound\BoolQuery;
+use Pucene\Component\QueryBuilder\Query\Specialized\MoreLikeThis\DocumentLike;
+use Pucene\Component\QueryBuilder\Query\Specialized\MoreLikeThis\MoreLikeThisQuery;
+use Pucene\Component\QueryBuilder\Query\TermLevel\TermQuery;
+use Pucene\Component\QueryBuilder\Search;
+use Sulu\Bundle\ArticleBundle\Document\ArticleViewDocumentInterface;
+use Sulu\Bundle\ArticleBundle\Elasticsearch\ViewManager;
 use Sulu\Bundle\ArticleBundle\Metadata\ArticleViewDocumentIdTrait;
 use Sulu\Component\DocumentManager\DocumentManagerInterface;
 
@@ -32,9 +31,9 @@ class ArticleViewDocumentRepository
     const DEFAULT_LIMIT = 5;
 
     /**
-     * @var Manager
+     * @var ViewManager
      */
-    protected $searchManager;
+    protected $viewManager;
 
     /**
      * @var DocumentManagerInterface
@@ -42,33 +41,13 @@ class ArticleViewDocumentRepository
     protected $documentManager;
 
     /**
-     * @var string
-     */
-    protected $articleDocumentClass;
-
-    /**
-     * @var Repository
-     */
-    protected $repository;
-
-    /**
      * @var array
      */
     protected $searchFields;
 
-    /**
-     * @param Manager $searchManager
-     * @param string $articleDocumentClass
-     * @param array $searchFields
-     */
-    public function __construct(
-        Manager $searchManager,
-        $articleDocumentClass,
-        array $searchFields
-    ) {
-        $this->searchManager = $searchManager;
-        $this->articleDocumentClass = $articleDocumentClass;
-        $this->repository = $this->searchManager->getRepository($this->articleDocumentClass);
+    public function __construct(ViewManager $viewManager, array $searchFields)
+    {
+        $this->viewManager = $viewManager;
         $this->searchFields = $searchFields;
     }
 
@@ -80,19 +59,22 @@ class ArticleViewDocumentRepository
      * @param null|array $types
      * @param null|string $locale
      *
-     * @return DocumentIterator
+     * @return ArticleViewDocumentInterface[]
      */
     public function findRecent($excludeUuid = null, $limit = self::DEFAULT_LIMIT, array $types = null, $locale = null)
     {
-        $search = $this->createSearch($limit, $types, $locale);
+        $query = $this->createSearchQuery($types, $locale);
+        $search = new Search();
+        $search->setSize($limit);
 
         if ($excludeUuid) {
-            $search->addQuery(new TermQuery('uuid', $excludeUuid), BoolQuery::MUST_NOT);
+            $query->mustNot(new TermQuery('uuid', $excludeUuid));
         }
 
-        $search->addSort(new FieldSort('authored', FieldSort::DESC));
+        // TODO field-sort
+        // $search->addSort(new FieldSort('authored', FieldSort::DESC));
 
-        return $this->repository->findDocuments($search);
+        return $this->viewManager->search($search);
     }
 
     /**
@@ -103,57 +85,53 @@ class ArticleViewDocumentRepository
      * @param null|array $types
      * @param null|string $locale
      *
-     * @return DocumentIterator
+     * @return ArticleViewDocumentInterface[]
      */
     public function findSimilar($uuid, $limit = self::DEFAULT_LIMIT, array $types = null, $locale = null)
     {
-        $search = $this->createSearch($limit, $types, $locale);
+        $query = $this->createSearchQuery($types, $locale);
+        $search = new Search();
+        $search->setSize($limit);
 
-        $search->addQuery(
-            new MoreLikeThisQuery(
-                null,
-                [
-                    'fields' => $this->searchFields,
-                    'min_term_freq' => 1,
-                    'min_doc_freq' => 2,
-                    'ids' => [$this->getViewDocumentId($uuid, $locale)],
-                ]
-            )
+        $moreLikeThis = new MoreLikeThisQuery(
+            [
+                new DocumentLike($this->getViewDocumentId($uuid, $locale))
+            ],
+            $this->searchFields
         );
+        $moreLikeThis->setMinTermFreq(1);
+        $moreLikeThis->setMinDocFreq(2);
+        $query->must($moreLikeThis);
 
-        return $this->repository->findDocuments($search);
+        return $this->viewManager->search($search);
     }
 
     /**
      * Creates search with default queries (size, locale, types).
      *
-     * @param int $limit
      * @param null|array $types
      * @param null|string $locale
      *
-     * @return Search
+     * @return BoolQuery
      */
-    private function createSearch($limit, array $types = null, $locale = null)
+    private function createSearchQuery(array $types = null, $locale = null)
     {
-        $search = $this->repository->createSearch();
-
-        // set size
-        $search->setSize($limit);
+        $query = new BoolQuery();
 
         // filter by locale if provided
         if ($locale) {
-            $search->addQuery(new TermQuery('locale', $locale), BoolQuery::FILTER);
+            $query->filter(new TermQuery('locale', $locale));
         }
 
         // filter by types if provided
         if ($types) {
             $typesQuery = new BoolQuery();
             foreach ($types as $type) {
-                $typesQuery->add(new TermQuery('type', $type), BoolQuery::SHOULD);
+                $typesQuery->should(new TermQuery('type', $type));
             }
-            $search->addQuery($typesQuery);
+            $query->must($typesQuery);
         }
 
-        return $search;
+        return $query;
     }
 }

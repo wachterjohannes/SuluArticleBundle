@@ -11,9 +11,11 @@
 
 namespace Sulu\Bundle\ArticleBundle\Teaser;
 
-use ONGR\ElasticsearchBundle\Service\Manager;
-use ONGR\ElasticsearchDSL\Query\TermLevel\IdsQuery;
+use Pucene\Component\QueryBuilder\Query\TermLevel\IdsQuery;
+use Pucene\Component\QueryBuilder\Search;
 use Sulu\Bundle\ArticleBundle\Document\ArticleViewDocument;
+use Sulu\Bundle\ArticleBundle\Document\ArticleViewDocumentInterface;
+use Sulu\Bundle\ArticleBundle\Elasticsearch\ViewManager;
 use Sulu\Bundle\ArticleBundle\Metadata\ArticleViewDocumentIdTrait;
 use Sulu\Bundle\ContentBundle\Teaser\Configuration\TeaserConfiguration;
 use Sulu\Bundle\ContentBundle\Teaser\Provider\TeaserProviderInterface;
@@ -28,9 +30,9 @@ class ArticleTeaserProvider implements TeaserProviderInterface
     use ArticleViewDocumentIdTrait;
 
     /**
-     * @var Manager
+     * @var ViewManager
      */
-    private $searchManager;
+    private $viewManager;
 
     /**
      * @var TranslatorInterface
@@ -38,20 +40,13 @@ class ArticleTeaserProvider implements TeaserProviderInterface
     private $translator;
 
     /**
-     * @var string
-     */
-    private $articleDocumentClass;
-
-    /**
-     * @param Manager $searchManager
+     * @param ViewManager $viewManager
      * @param TranslatorInterface $translator
-     * @param $articleDocumentClass
      */
-    public function __construct(Manager $searchManager, TranslatorInterface $translator, $articleDocumentClass)
+    public function __construct(ViewManager $viewManager, TranslatorInterface $translator)
     {
-        $this->searchManager = $searchManager;
+        $this->viewManager = $viewManager;
         $this->translator = $translator;
-        $this->articleDocumentClass = $articleDocumentClass;
     }
 
     /**
@@ -67,7 +62,7 @@ class ArticleTeaserProvider implements TeaserProviderInterface
             [
                 'url' => '/admin/api/articles?locale={locale}',
                 'resultKey' => 'articles',
-                'searchFields' => ['title', 'route_path', 'changer_full_name', 'creator_full_name', 'author_full_name'],
+                'searchFields' => ['title', 'routePath', 'changerFullName', 'creatorFullName', 'authorFullName'],
             ],
             [
                 [
@@ -163,14 +158,10 @@ class ArticleTeaserProvider implements TeaserProviderInterface
             return [];
         }
 
-        $articleIds = $this->getViewDocumentIds($ids, $locale);
-
-        $repository = $this->searchManager->getRepository($this->articleDocumentClass);
-        $search = $repository->createSearch();
-        $search->addQuery(new IdsQuery($articleIds));
+        $search = new Search(new IdsQuery($this->getViewDocumentIds($ids, $locale)));
 
         $result = [];
-        foreach ($repository->findDocuments($search) as $item) {
+        foreach ($this->viewManager->search($search) as $item) {
             $excerpt = $item->getExcerpt();
             $result[] = new Teaser(
                 $item->getUuid(),
@@ -191,11 +182,11 @@ class ArticleTeaserProvider implements TeaserProviderInterface
     /**
      * Returns attributes for teaser.
      *
-     * @param ArticleViewDocument $viewDocument
+     * @param ArticleViewDocumentInterface $viewDocument
      *
      * @return array
      */
-    protected function getAttributes(ArticleViewDocument $viewDocument)
+    protected function getAttributes(ArticleViewDocumentInterface $viewDocument)
     {
         return [
             'structureType' => $viewDocument->getStructureType(),

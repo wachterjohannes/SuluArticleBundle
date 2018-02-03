@@ -209,7 +209,7 @@ define([
                     url: urlArticleApi,
                     storageName: this.options.storageName,
                     searchInstanceName: 'articles',
-                    searchFields: ['title', 'route_path', 'changer_full_name', 'creator_full_name', 'author_full_name'],
+                    searchFields: ['title', 'routePath', 'changerFullName', 'creatorFullName', 'authorFullName'],
                     resultKey: 'articles',
                     instanceName: 'articles',
                     actionCallback: this.actionCallback.bind(this),

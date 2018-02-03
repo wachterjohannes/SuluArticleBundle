@@ -11,35 +11,18 @@
 
 namespace Sulu\Bundle\ArticleBundle\Document;
 
-use ONGR\ElasticsearchBundle\Annotation\Object;
-use ONGR\ElasticsearchBundle\Annotation\Property;
-
 /**
- * Contains excerpt information for articles.
- *
- * @Object
+ * Contains excerpt information for tags.
  */
 class TagViewObject
 {
     /**
      * @var int
-     *
-     * @Property(type="integer")
      */
     public $id;
 
     /**
      * @var string
-     *
-     * @Property(
-     *     type="string",
-     *     options={
-     *        "fields"={
-     *            "raw"={"type"="string", "index"="not_analyzed"},
-     *            "value"={"type"="string"}
-     *        }
-     *    }
-     * )
      */
     public $name;
 }
